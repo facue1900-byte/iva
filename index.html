@@ -196,7 +196,7 @@ const DB = {
   async abrir() {
     if (this.db) return this.db;
     this.db = await new Promise((ok, err) => {
-      const r = indexedDB.open('iva-estevez', 1);
+      const r = indexedDB.open('facturas-cola', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('cola', { keyPath: 'id', autoIncrement: true });
       r.onsuccess = () => ok(r.result);
       r.onerror = () => err(r.error);

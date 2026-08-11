@@ -6,7 +6,7 @@
  * peor que no mostrar nada. Si no hay señal, la pantalla dice que no se pudo
  * conectar — y la carga de facturas sigue andando porque va a la cola.
  */
-const CACHE = 'iva-estevez-v1';
+const CACHE = 'facturas-cola-v1';
 const SHELL = ['./', './index.html', './manifest.json', './icono.png'];
 
 self.addEventListener('install', e => {

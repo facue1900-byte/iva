@@ -179,19 +179,23 @@
 
 <script>
 // ---------------------------------------------------------------- config
-// La URL del Apps Script y el token viajan en el hash del link, así que el
-// link ES la credencial. Se guardan una vez para que la app instalada en el
-// teléfono siga andando sin volver a pegarlo.
+// El link corto es sólo la llave de cada persona: …/iva/#k=XXXX. La dirección
+// del servidor viene fija acá (no es secreta: sin una llave válida contesta
+// 401). Los links largos viejos (#api=…&token=…) siguen andando.
+// La llave se guarda una vez para que la app instalada en el teléfono siga
+// andando sin volver a abrir el link.
+const API_FIJA = 'https://script.google.com/macros/s/AKfycbxZlYOMbGZjUlkSawdFD_cFBgOCnbZi54xAL3P-HQUFZ6X0wvwnb2ge8UwibD2LkIXM/exec';
 const CFG = (() => {
   const g = new URLSearchParams(location.hash.slice(1));
-  if (g.get('api') && g.get('token')) {
-    localStorage.setItem('iva_api', g.get('api'));
-    localStorage.setItem('iva_token', g.get('token'));
+  const llave = g.get('k') || g.get('token');
+  if (llave) {
+    localStorage.setItem('iva_api', g.get('api') || API_FIJA);
+    localStorage.setItem('iva_token', llave);
     // El link NO se limpia de la barra: en el iPhone, "Agregar a inicio" guarda
-    // la URL que se ve, y la app instalada tiene su propio almacenamiento. Sin
-    // el link completo, la app del inicio abriría sin saber a dónde mandar.
+    // la URL que se ve, y la app instalada tiene su propio almacenamiento.
   }
-  return { api: localStorage.getItem('iva_api'), token: localStorage.getItem('iva_token') };
+  return { api: localStorage.getItem('iva_api') || (localStorage.getItem('iva_token') ? API_FIJA : null),
+           token: localStorage.getItem('iva_token') };
 })();
 
 const $ = s => document.querySelector(s);

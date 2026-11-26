@@ -28,7 +28,7 @@
     padding-top: calc(14px + env(safe-area-inset-top));
     position: sticky; top: 0; z-index: 10;
   }
-  header h1 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: .01em; }
+  header h1 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: .01em; text-align: center; }
   header .sub { font-size: .78rem; color: #9ca3af; margin-top: 1px; }
   .pestanas { display: flex; gap: 4px; margin-top: 12px; }
   .pestanas button {
@@ -126,8 +126,11 @@
   td.n { text-align: right; font-variant-numeric: tabular-nums; }
   td.det { white-space: normal; min-width: 220px; max-width: 320px; color: #374151; }
   td.razon { white-space: normal; min-width: 160px; max-width: 220px; font-weight: 600; }
+  /* El pie queda arriba de las filas que pasan por debajo: sin z-index, la
+     razón social fija de una fila se pintaba encima de "N comprobantes". */
   tfoot td { position: sticky; bottom: 0; background: #f3f4f6; font-weight: 700;
-             border-top: 2px solid var(--linea); }
+             border-top: 2px solid var(--linea); z-index: 2; }
+  tfoot td:first-child { z-index: 4; background: #f3f4f6; }
   .est { font-size: .68rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; }
   .est.OK { background: var(--verde-claro); color: #166534; }
   .est.REVISAR { background: var(--amba-claro); color: #854d0e; }
@@ -144,7 +147,6 @@
        archivo se publica en un repo público y no tiene por qué decir de quién
        es. Hasta que conteste, el encabezado es neutro. -->
   <h1 id="titulo">Comprobantes</h1>
-  <div class="sub" id="sub">Facturas, tickets y recibos</div>
   <div class="pestanas">
     <button id="tab-mandar" class="activa">Mandar</button>
     <button id="tab-iva">Ver IVA y gastos</button>
@@ -477,7 +479,8 @@ async function refrescarPanel() {
     const p = await api('panel', {}, 'GET');
     if (mio !== gen) return;
     PANEL = p;
-    pintarPanel();
+    if (p.solo_carga) { $('#tab-iva').textContent = 'Lo que cargué'; pintarCargas(); }
+    else pintarPanel();
   } catch (e) {
     if (mio !== gen) return;
     $('#panel').innerHTML = `<div class="vacio">No se pudo conectar.<br><small>${esc(e.message)}</small></div>`;
@@ -495,15 +498,39 @@ function lineasIibb(o, suf = '') {
     .map(j => linea('Percep. IIBB ' + j.nombre, pesos(o[j.clave + suf]))).join('');
 }
 
+// Para quien sólo carga: la lista de lo que mandó, sin totales de IVA (el
+// servidor ni los manda).
+function pintarCargas() {
+  const fs = PANEL.filas || [];
+  $('#panel').innerHTML = !fs.length
+    ? '<div class="vacio">Todavía no cargaste ningún comprobante.</div>'
+    : `<h2>Lo que cargaste (${fs.length})</h2><div class="tabla-caja"><table>
+      <thead><tr><th>Proveedor</th><th>Estado</th><th>Fecha</th><th>Comprobante</th><th>Total</th><th>Foto</th></tr></thead>
+      <tbody>${fs.map(f => `<tr>
+        <td class="razon">${esc(f.razon || '(sin nombre)')}</td>
+        <td><span class="est ${esc(f.estado)}">${esc(f.estado)}</span></td>
+        <td>${esc(fechaCorta(f.fecha))}</td>
+        <td>${esc([f.clase, f.letra, f.numero].filter(Boolean).join(' '))}</td>
+        <td class="n">${f.total ? pesos(f.total) : '—'}</td>
+        <td>${f.archivo ? `<a href="${esc(f.archivo)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+}
+
 function pintarPanel() {
   const p = PANEL, h = p.hoy || {};
   const pendientes = (h.revisar || 0) + (h.frenados || 0);
   const paga = h.a_pagar > 0;
 
+  // "Al día de hoy" es el mes de HOY. Si en el mes en curso todavía no se cargó
+  // nada, se dice así y se muestra el saldo con el que arranca (el del último mes).
+  const d = new Date(), mesHoy = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const enCurso = h.mes === mesHoy;
   const hoy = `<div class="caja ${paga ? 'pagar' : 'favor'}">
-      <div class="rot">Al día de hoy${h.mes ? ' · ' + nombreMes(h.mes) : ''}</div>
+      <div class="rot">Al día de hoy · ${nombreMes(mesHoy)}${enCurso ? ' (en curso)' : ''}</div>
       <div class="veredicto"><div class="plata">${pesos(paga ? h.a_pagar : h.a_favor)}</div>
-        <div style="font-weight:600">${paga ? 'Hay que pagar de IVA' : 'Saldo de IVA a favor'}</div></div>
+        <div style="font-weight:600">${paga ? 'Hay que pagar de IVA' : 'Saldo de IVA a favor, acumulado'}</div></div>
+      ${!enCurso && h.mes ? `<div class="nota">De ${nombreMes(mesHoy).toLowerCase()} todavía no hay comprobantes
+        cargados: el saldo es el que quedó al cierre de ${nombreMes(h.mes).toLowerCase()}.</div>` : ''}
       ${linea('IVA en contra (ventas)', pesos(h.debito_total))}
       ${linea('IVA a favor (compras)', '−' + pesos(h.credito_total))}
       ${linea('Percepciones y retenciones de IVA', '−' + pesos(h.perc_iva_total))}
@@ -538,8 +565,10 @@ function pintarPanel() {
     return `<div class="caja ${pm ? 'pagar' : 'favor'}">
       <div class="cab"><span class="nombre">${esc(nombreMes(m.mes))}</span>
         ${pend ? `<span class="pend">${pend} sin revisar</span>` : ''}</div>
-      <div class="veredicto"><div class="rot">${pm ? 'Hay que pagar' : 'Queda a favor'}</div>
+      <div class="veredicto"><div class="rot">${pm ? 'Hay que pagar' : 'A favor acumulado al cierre'}</div>
         <div class="plata">${pesos(pm ? m.a_pagar : m.a_favor)}</div></div>
+      ${(() => { const r = m.debito - m.credito - m.perc_iva;
+        return linea('<b>Resultado del mes solo</b>', `<b>${r > 0 ? 'en contra ' + pesos(r) : 'a favor ' + pesos(-r)}</b>`); })()}
       ${linea('IVA en contra (ventas)', pesos(m.debito))}
       ${linea('IVA a favor (compras)', '−' + pesos(m.credito))}
       ${linea('Percepciones de IVA', '−' + pesos(m.perc_iva))}
@@ -645,7 +674,7 @@ if (!CFG.api) {
   api('ping', {}, 'GET')
     .then(r => {
       if (r.empresa) $('#titulo').textContent = r.empresa;
-      if (r.quien) $('#sub').textContent = 'Hola, ' + r.quien;
+      if (r.solo_carga) $('#tab-iva').textContent = 'Lo que cargué';
     })
     .catch(() => {});
 }

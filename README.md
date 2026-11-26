@@ -1,7 +1,8 @@
 # Cargador de facturas
 
-Pantalla para sacarle foto a una factura A argentina y que el IVA quede anotado
-solo en una planilla, con el neto separado del IVA.
+Pantalla para mandar fotos o PDFs de cualquier comprobante argentino (facturas A,
+B o C, tickets, recibos, liquidaciones) y que el IVA y el gasto queden anotados
+solos en una planilla, con una vista del IVA al día, por año y por mes.
 
 Es **sólo el frente**: no tiene datos, ni credenciales, ni sabe de quién es la
 planilla que va a escribir. La dirección del backend y la llave llegan en el

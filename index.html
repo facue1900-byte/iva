@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icono.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Facturas">
-<title>Carga de facturas</title>
+<title>Comprobantes</title>
 <style>
   /* Fondo claro a propósito: esto se usa afuera, con sol. */
   :root {
@@ -24,110 +24,117 @@
     padding: 0 0 env(safe-area-inset-bottom);
   }
   header {
-    background: var(--tinta); color: #fff; padding: 14px 18px;
+    background: var(--tinta); color: #fff; padding: 14px 18px 0;
     padding-top: calc(14px + env(safe-area-inset-top));
     position: sticky; top: 0; z-index: 10;
   }
   header h1 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: .01em; }
   header .sub { font-size: .78rem; color: #9ca3af; margin-top: 1px; }
+  .pestanas { display: flex; gap: 4px; margin-top: 12px; }
+  .pestanas button {
+    flex: 1; background: none; border: none; color: #9ca3af; font: inherit;
+    font-size: .92rem; font-weight: 600; padding: 10px 0 12px; cursor: pointer;
+    border-bottom: 3px solid transparent;
+  }
+  .pestanas button.activa { color: #fff; border-bottom-color: #22c55e; }
   main { padding: 16px; max-width: 640px; margin: 0 auto; }
+  main.ancho { max-width: 1100px; }
+  .vista { display: none; }
+  .vista.activa { display: block; }
 
   /* --- el botón principal: grande, imposible de errar --- */
   .cargar {
-    display: block; width: 100%; border: none; border-radius: 16px;
-    background: var(--verde); color: #fff; font-size: 1.2rem; font-weight: 600;
-    padding: 26px 20px; cursor: pointer; text-align: center;
-    box-shadow: 0 2px 0 #14532d; font-family: inherit;
+    display: block; width: 100%; border: none; border-radius: 18px;
+    background: var(--verde); color: #fff; font-size: 1.35rem; font-weight: 700;
+    padding: 34px 20px; cursor: pointer; text-align: center;
+    box-shadow: 0 3px 0 #14532d; font-family: inherit;
   }
-  .cargar:active { transform: translateY(1px); box-shadow: 0 1px 0 #14532d; }
-  .cargar .ico { display: block; font-size: 1.9rem; margin-bottom: 6px; }
-  .cargar[disabled] { background: var(--gris); box-shadow: none; }
+  .cargar:active { transform: translateY(2px); box-shadow: 0 1px 0 #14532d; }
+  .cargar .ico { display: block; font-size: 2.4rem; margin-bottom: 8px; }
+  .ayuda { text-align: center; color: var(--gris); font-size: .9rem; margin: 12px 4px 0; }
   input[type=file] { display: none; }
 
   .aviso-cola {
-    margin-top: 12px; background: var(--amba-claro); border: 1px solid #fde047;
-    border-radius: 12px; padding: 12px 14px; font-size: .9rem;
+    margin-top: 14px; background: var(--amba-claro); border: 1px solid #fde047;
+    border-radius: 12px; padding: 12px 14px; font-size: .92rem;
     display: none; align-items: center; gap: 10px;
   }
   .aviso-cola.hay { display: flex; }
   .aviso-cola button {
     margin-left: auto; background: #fff; border: 1px solid #ca8a04; color: #854d0e;
-    border-radius: 8px; padding: 6px 12px; font-size: .82rem; font-family: inherit;
+    border-radius: 8px; padding: 7px 12px; font-size: .85rem; font-family: inherit;
     cursor: pointer; font-weight: 600; white-space: nowrap;
   }
 
   h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
        color: var(--gris); margin: 26px 0 10px; font-weight: 700; }
 
-  .tarj { background: #fff; border: 1px solid var(--linea); border-radius: 14px;
-          padding: 14px 16px; margin-bottom: 10px; }
-  .tarj.frenado { border-left: 4px solid var(--rojo); }
-  .tarj.revisar { border-left: 4px solid #ca8a04; }
-  .tarj .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-  .tarj .quien { font-weight: 600; font-size: .97rem; }
-  .tarj .monto { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .tarj .meta { color: var(--gris); font-size: .8rem; margin-top: 3px; }
-  .chip { display: inline-block; font-size: .68rem; font-weight: 700; padding: 2px 8px;
-          border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; }
-  .chip.compra { background: #dbeafe; color: #1e40af; }
-  .chip.venta  { background: #f3e8ff; color: #6b21a8; }
-  .alerta { margin-top: 9px; background: var(--rojo-claro); color: #7f1d1d;
-            border-radius: 8px; padding: 9px 11px; font-size: .82rem; }
-  .acciones { display: flex; gap: 8px; margin-top: 12px; }
-  .acciones a, .acciones button {
-    flex: 1; text-align: center; padding: 11px; border-radius: 10px; font-size: .86rem;
-    font-weight: 600; text-decoration: none; border: 1px solid var(--linea);
-    background: #fff; color: var(--tinta); cursor: pointer; font-family: inherit;
-  }
-  .acciones .ok { background: var(--verde); border-color: var(--verde); color: #fff; }
-
-  /* El resumen del mes va en tarjeta, no en tabla: en el celular la columna
-     del resultado —el único número que contesta "¿hay que pagar?"— quedaba
-     fuera de pantalla y había que scrollear al costado para verlo. */
-  .mes { background: #fff; border: 1px solid var(--linea); border-radius: 14px;
-         padding: 16px; margin-bottom: 10px; }
-  .mes .cab { display: flex; justify-content: space-between; align-items: center;
-              gap: 10px; margin-bottom: 12px; }
-  .mes .nombre { font-weight: 700; font-size: 1rem; text-transform: capitalize; }
-  .mes .pend { font-size: .72rem; font-weight: 700; background: var(--amba-claro);
-               color: #854d0e; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
-  .mes .veredicto { padding: 12px 0 14px; border-bottom: 1px solid #f3f4f6; }
-  .mes .veredicto .rot { font-size: .72rem; text-transform: uppercase;
-                         letter-spacing: .07em; font-weight: 700; color: var(--gris); }
-  .mes .veredicto .plata { font-size: 1.75rem; font-weight: 800; line-height: 1.15;
-                           margin-top: 2px; font-variant-numeric: tabular-nums; }
-  .mes .veredicto.pagar .plata { color: var(--rojo); }
-  .mes .veredicto.favor .plata { color: var(--verde); }
-  .mes .linea-det { display: flex; justify-content: space-between; padding: 7px 0;
-                    font-size: .88rem; font-variant-numeric: tabular-nums; }
-  .mes .linea-det .r { color: var(--gris); }
-  .mes .linea-det .v { font-weight: 600; }
-  .mes .nota { margin-top: 10px; background: var(--amba-claro); color: #854d0e;
-               border-radius: 8px; padding: 9px 11px; font-size: .8rem; }
+  .envio { background: #fff; border: 1px solid var(--linea); border-left-width: 5px;
+           border-radius: 12px; padding: 12px 14px; margin-bottom: 9px; }
+  .envio.ok { border-left-color: var(--verde); }
+  .envio.revisar { border-left-color: #ca8a04; }
+  .envio.frenado, .envio.error { border-left-color: var(--rojo); }
+  .envio.espera, .envio.subiendo { border-left-color: var(--linea); }
+  .envio .t { font-weight: 700; font-size: .97rem; }
+  .envio .d { color: var(--gris); font-size: .84rem; margin-top: 2px; }
+  .envio .m { font-size: .84rem; margin-top: 6px; }
 
   .vacio { color: var(--gris); font-size: .9rem; text-align: center;
-           padding: 26px 16px; background: #fff; border: 1px dashed var(--linea);
+           padding: 24px 16px; background: #fff; border: 1px dashed var(--linea);
            border-radius: 14px; }
 
-  /* --- la pantalla de confirmación --- */
-  .modal { position: fixed; inset: 0; background: rgba(17,24,39,.6); z-index: 50;
-           display: none; align-items: flex-end; justify-content: center; }
-  .modal.abierto { display: flex; }
-  .hoja { background: #fff; width: 100%; max-width: 640px; border-radius: 20px 20px 0 0;
-          max-height: 92vh; overflow-y: auto; padding: 20px 18px calc(20px + env(safe-area-inset-bottom)); }
-  .hoja h3 { margin: 0 0 4px; font-size: 1.1rem; }
-  .hoja .sub { color: var(--gris); font-size: .85rem; margin-bottom: 16px; }
-  .campo { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0;
-           border-bottom: 1px solid #f3f4f6; font-size: .92rem; }
-  .campo .r { color: var(--gris); }
-  .campo .v { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
-  .campo.destaca .v { color: var(--verde); font-size: 1.05rem; }
-  .estado-lee { text-align: center; padding: 40px 20px; }
-  .spinner { width: 34px; height: 34px; border: 3px solid var(--linea);
-             border-top-color: var(--verde); border-radius: 50%; margin: 0 auto 14px;
-             animation: giro .8s linear infinite; }
-  @keyframes giro { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+  /* --- la vista del IVA --- */
+  .grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .caja { background: #fff; border: 1px solid var(--linea); border-radius: 14px; padding: 16px; }
+  .caja .rot { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em;
+               font-weight: 700; color: var(--gris); }
+  .caja .plata { font-size: 1.8rem; font-weight: 800; line-height: 1.15; margin-top: 2px;
+                 font-variant-numeric: tabular-nums; }
+  .caja.pagar .plata { color: var(--rojo); }
+  .caja.favor .plata { color: var(--verde); }
+  .caja .nombre { font-weight: 700; font-size: 1rem; text-transform: capitalize; }
+  .caja .cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pend { font-size: .72rem; font-weight: 700; background: var(--amba-claro);
+          color: #854d0e; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .linea-det { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0;
+               font-size: .88rem; font-variant-numeric: tabular-nums;
+               border-top: 1px solid #f3f4f6; }
+  .linea-det .r { color: var(--gris); }
+  .linea-det .v { font-weight: 600; white-space: nowrap; }
+  .veredicto { padding: 8px 0 12px; }
+  .nota { margin-top: 10px; background: var(--amba-claro); color: #854d0e;
+          border-radius: 8px; padding: 9px 11px; font-size: .82rem; }
+
+  /* --- la tabla tipo planilla --- */
+  .filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .filtros select, .filtros input {
+    font: inherit; font-size: .9rem; padding: 9px 10px; border: 1px solid var(--linea);
+    border-radius: 10px; background: #fff; min-width: 0;
+  }
+  .filtros input { flex: 1 1 180px; }
+  .tabla-caja { overflow: auto; max-height: 70vh; background: #fff;
+                border: 1px solid var(--linea); border-radius: 12px; }
+  table { border-collapse: separate; border-spacing: 0; font-size: .82rem; width: max-content; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid #eef0f3; white-space: nowrap;
+           text-align: left; vertical-align: top; }
+  th { position: sticky; top: 0; background: #1f2937; color: #fff; font-weight: 600;
+       z-index: 2; font-size: .75rem; }
+  th:first-child, td:first-child { position: sticky; left: 0; z-index: 1; background: inherit; }
+  th:first-child { z-index: 3; background: #1f2937; }
+  tbody tr { background: #fff; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  td.det { white-space: normal; min-width: 220px; max-width: 320px; color: #374151; }
+  td.razon { white-space: normal; min-width: 160px; max-width: 220px; font-weight: 600; }
+  tfoot td { position: sticky; bottom: 0; background: #f3f4f6; font-weight: 700;
+             border-top: 2px solid var(--linea); }
+  .est { font-size: .68rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; }
+  .est.OK { background: var(--verde-claro); color: #166534; }
+  .est.REVISAR { background: var(--amba-claro); color: #854d0e; }
+  .est.FRENADO { background: var(--rojo-claro); color: #991b1b; }
+  .op { font-size: .68rem; font-weight: 700; color: var(--gris); }
+  a { color: #1d4ed8; }
+  .link-planilla { display: inline-block; margin-top: 10px; font-size: .88rem; }
 </style>
 </head>
 <body>
@@ -136,32 +143,39 @@
   <!-- El nombre de la empresa lo trae el backend, no está escrito acá: este
        archivo se publica en un repo público y no tiene por qué decir de quién
        es. Hasta que conteste, el encabezado es neutro. -->
-  <h1 id="titulo">Carga de facturas</h1>
-  <div class="sub" id="sub">Facturas A · compras y ventas</div>
+  <h1 id="titulo">Comprobantes</h1>
+  <div class="sub" id="sub">Facturas, tickets y recibos</div>
+  <div class="pestanas">
+    <button id="tab-mandar" class="activa">Mandar</button>
+    <button id="tab-iva">Ver IVA y gastos</button>
+  </div>
 </header>
 
-<main>
-  <button class="cargar" id="btn-cargar">
-    <span class="ico">📄</span>
-    Cargar una factura
-  </button>
-  <input type="file" id="file" accept="image/*,application/pdf" capture="environment">
+<main id="main">
+  <!-- ================================================================ MANDAR -->
+  <section class="vista activa" id="vista-mandar">
+    <button class="cargar" id="btn-cargar">
+      <span class="ico">📷</span>
+      Mandar factura
+    </button>
+    <p class="ayuda">Foto o PDF. Cualquier factura, ticket o recibo.<br>
+      Podés elegir varias juntas.</p>
+    <input type="file" id="file" accept="image/*,application/pdf" multiple>
 
-  <div class="aviso-cola" id="aviso-cola">
-    <span id="txt-cola"></span>
-    <button id="btn-reintentar">Reintentar</button>
-  </div>
+    <div class="aviso-cola" id="aviso-cola">
+      <span id="txt-cola"></span>
+      <button id="btn-reintentar">Reintentar</button>
+    </div>
 
-  <h2>Para revisar</h2>
-  <div id="pendientes"><div class="vacio">Cargando…</div></div>
+    <h2>Lo que mandaste</h2>
+    <div id="envios"><div class="vacio">Todavía no mandaste nada desde este teléfono.</div></div>
+  </section>
 
-  <h2>IVA por mes</h2>
-  <div id="resumen"></div>
+  <!-- ================================================================ IVA -->
+  <section class="vista" id="vista-iva">
+    <div id="panel"><div class="vacio">Cargando…</div></div>
+  </section>
 </main>
-
-<div class="modal" id="modal">
-  <div class="hoja" id="hoja"></div>
-</div>
 
 <script>
 // ---------------------------------------------------------------- config
@@ -173,24 +187,43 @@ const CFG = (() => {
   if (g.get('api') && g.get('token')) {
     localStorage.setItem('iva_api', g.get('api'));
     localStorage.setItem('iva_token', g.get('token'));
-    history.replaceState(null, '', location.pathname);
+    // El link NO se limpia de la barra: en el iPhone, "Agregar a inicio" guarda
+    // la URL que se ve, y la app instalada tiene su propio almacenamiento. Sin
+    // el link completo, la app del inicio abriría sin saber a dónde mandar.
   }
-  return {
-    api: localStorage.getItem('iva_api'),
-    token: localStorage.getItem('iva_token'),
-    quien: localStorage.getItem('iva_quien') || ''
-  };
+  return { api: localStorage.getItem('iva_api'), token: localStorage.getItem('iva_token') };
 })();
 
 const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pesos = n => (Number(n) || 0).toLocaleString('es-AR',
   { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 });
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+               'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const nombreMes = s => {
+  const [a, m] = String(s).split('-');
+  return MESES[Number(m) - 1] ? `${MESES[Number(m) - 1]} ${a}` : s;
+};
+const fechaCorta = s => /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.split('-').reverse().join('/') : (s || '—');
+
+// ---------------------------------------------------------------- pestañas
+function verPestana(cual) {
+  ['mandar', 'iva'].forEach(p => {
+    $('#tab-' + p).classList.toggle('activa', p === cual);
+    $('#vista-' + p).classList.toggle('activa', p === cual);
+  });
+  $('#main').classList.toggle('ancho', cual === 'iva');
+  if (cual === 'iva') refrescarPanel();
+}
+$('#tab-mandar').onclick = () => verPestana('mandar');
+$('#tab-iva').onclick = () => verPestana('iva');
 
 // ---------------------------------------------------------------- la cola
 // IndexedDB, no localStorage: acá van fotos y no entran en 5MB.
-// Regla que no se rompe: una foto NUNCA se borra de la cola hasta que el
-// servidor contestó que la guardó. Si la app se cierra a mitad de camino,
-// la foto sigue estando.
+// Regla que no se rompe: un archivo NUNCA se borra de la cola hasta que el
+// servidor contestó que lo guardó (o que ya estaba). Si la app se cierra a
+// mitad de camino, el archivo sigue estando.
 const DB = {
   db: null,
   async abrir() {
@@ -213,45 +246,65 @@ const DB = {
     });
   },
   guardar: function (item) { return this._tx('readwrite', s => s.add(item)); },
+  poner:   function (item) { return this._tx('readwrite', s => s.put(item)); },
   borrar:  function (id)   { return this._tx('readwrite', s => s.delete(id)); },
   todos:   function ()     { return this._tx('readonly',  s => s.getAll()); }
+};
+
+// Lo que ya se mandó y qué pasó, para que la persona lo vea. Sólo texto, sin
+// archivos: entra en localStorage.
+const HIST = {
+  leer() { try { return JSON.parse(localStorage.getItem('iva_envios') || '[]'); } catch (e) { return []; } },
+  poner(clave, datos) {
+    const l = this.leer();
+    const i = l.findIndex(x => x.clave === clave);
+    const nuevo = { ...(i >= 0 ? l[i] : {}), clave, ...datos, cuando: datos.cuando || (i >= 0 && l[i].cuando) || new Date().toISOString() };
+    if (i >= 0) l[i] = nuevo; else l.unshift(nuevo);
+    localStorage.setItem('iva_envios', JSON.stringify(l.slice(0, 40)));
+    pintarEnvios();
+  }
 };
 
 // ---------------------------------------------------------------- red
 async function api(accion, extra = {}, metodo = 'POST') {
   if (!CFG.api) throw new Error('Falta configurar el link (pedíselo a Facu)');
-  if (metodo === 'GET') {
-    const u = new URL(CFG.api);
-    u.searchParams.set('token', CFG.token);
-    u.searchParams.set('accion', accion);
-    const r = await fetch(u, { redirect: 'follow' });
-    if (!r.ok) throw new Error('El servidor contestó ' + r.status);
-    return r.json();
-  }
   let r;
+  // Con señal mala un pedido puede quedar colgado para siempre, y con él toda la
+  // fila. A los 2 minutos se corta y se trata como falta de señal.
+  const corte = new AbortController();
+  const reloj = setTimeout(() => corte.abort(), 120000);
   try {
-    r = await fetch(CFG.api, {
-      method: 'POST', redirect: 'follow',
-      // text/plain evita el preflight de CORS, que Apps Script no contesta.
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ token: CFG.token, accion, ...extra })
-    });
+    if (metodo === 'GET') {
+      const u = new URL(CFG.api);
+      u.searchParams.set('token', CFG.token);
+      u.searchParams.set('accion', accion);
+      r = await fetch(u, { redirect: 'follow', signal: corte.signal });
+    } else {
+      r = await fetch(CFG.api, {
+        method: 'POST', redirect: 'follow', signal: corte.signal,
+        // text/plain evita el preflight de CORS, que Apps Script no contesta.
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: CFG.token, accion, ...extra })
+      });
+    }
   } catch (e) {
-    // No se llegó al servidor: esto sí es falta de señal.
+    clearTimeout(reloj);
+    // No se llegó al servidor (o tardó demasiado): esto sí es falta de señal.
     throw Object.assign(new Error('No hay señal'), { sinSenal: true });
   }
-  if (!r.ok) {
-    // El servidor CONTESTÓ, con un error. No es lo mismo que no tener señal, y
-    // decir "esperando señal" acá es mentir: pasó de verdad, con el lector sin
-    // cuota disponible, y la pantalla culpaba al campo.
-    let detalle = '';
-    try { detalle = (await r.json()).error || ''; } catch (e) { /* sin cuerpo */ }
-    throw Object.assign(
-      new Error(detalle || 'El servidor contestó ' + r.status),
-      { delServidor: true, status: r.status }
-    );
+  let cuerpo = null;
+  try { cuerpo = await r.json(); } catch (e) { /* sin cuerpo */ }
+  clearTimeout(reloj);
+  // Apps Script siempre contesta 200: el "no autorizado" viene en el cuerpo.
+  if (r.status === 401 || (cuerpo && cuerpo.status === 401)) {
+    throw Object.assign(new Error('Este link ya no sirve. Pedile a Facu el link nuevo.'), { noAutorizado: true });
   }
-  return r.json();
+  if (!r.ok || !cuerpo) {
+    // El servidor CONTESTÓ, con un error. No es lo mismo que no tener señal.
+    throw Object.assign(new Error((cuerpo && cuerpo.error) || 'El servidor contestó ' + r.status),
+                        { delServidor: true });
+  }
+  return cuerpo;
 }
 
 const b64 = blob => new Promise((ok, err) => {
@@ -261,262 +314,316 @@ const b64 = blob => new Promise((ok, err) => {
   fr.readAsDataURL(blob);
 });
 
-// ---------------------------------------------------------------- cargar
+// Las fotos del teléfono pesan 3 a 8 MB y en el campo la señal es mala. Se
+// achican a 2000 px de lado, que sobra para leer una factura. Los PDF van
+// como están. Si el navegador no puede achicarla, va la original.
+// Se limita por SUPERFICIE (4 megapíxeles), no por el lado largo: un ticket
+// angosto y largo, achicado por el lado largo, quedaba ilegible.
+async function achicar(file) {
+  if (!/^image\//.test(file.type) || file.size < 700 * 1024) return file;
+  let bmp = null;
+  const c = document.createElement('canvas');
+  try {
+    bmp = await createImageBitmap(file);
+    const escala = Math.min(1, Math.sqrt(4000000 / (bmp.width * bmp.height)));
+    c.width = Math.round(bmp.width * escala); c.height = Math.round(bmp.height * escala);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.85));
+    return blob && blob.size < file.size ? blob : file;
+  } catch (e) {
+    return file;
+  } finally {
+    // En el iPhone, varias fotos seguidas sin liberar memoria cierran la app.
+    if (bmp && bmp.close) bmp.close();
+    c.width = 0; c.height = 0;
+  }
+}
+
+const MAX_BYTES = 14 * 1024 * 1024;   // más grande, el lector lo rechaza
+
+// ---------------------------------------------------------------- mandar
 $('#btn-cargar').onclick = () => $('#file').click();
 
 $('#file').onchange = async e => {
-  const f = e.target.files[0];
+  const files = Array.from(e.target.files || []);
   e.target.value = '';
-  if (!f) return;
-
-  abrirModal(`<div class="estado-lee"><div class="spinner"></div>
-    <div style="font-weight:600">Leyendo la factura…</div>
-    <div style="color:var(--gris);font-size:.85rem;margin-top:4px">
-      Tarda unos segundos</div></div>`);
-
-  const item = {
-    nombre: f.name || 'factura.jpg',
-    mime: f.type || 'image/jpeg',
-    b64: await b64(f),
-    cargado_por: CFG.quien || 'link',
-    cuando: new Date().toISOString()
-  };
-
-  try {
-    const r = await api('cargar', {
-      archivo_b64: item.b64, mime: item.mime,
-      nombre: item.nombre, cargado_por: item.cargado_por
-    });
-    mostrarResultado(r);
-    refrescar();
-  } catch (err) {
-    // No se pregunta si "hay internet": navigator.onLine miente. Se intenta,
-    // y si falla, se encola. La foto no se pierde nunca.
-    //
-    // Pero el motivo se dice como es. Un 401 no se arregla esperando señal.
-    if (err.status === 401) {
-      return abrirModal(`
-        <h3>Este link ya no sirve</h3>
-        <div class="sub">El servidor lo rechazó. Pedile a Facu el link nuevo —
-          la foto no se guardó.</div>
-        <div class="acciones"><button onclick="cerrarModal()">Cerrar</button></div>`);
+  for (const f of files) {
+    const clave = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    const chico = await achicar(f);
+    let nombre = f.name || 'factura.jpg';
+    // Si se achicó, ahora es un JPEG: el nombre tiene que decirlo.
+    if (chico !== f) nombre = nombre.replace(/\.[^.]+$/, '') + '.jpg';
+    if (chico.size > MAX_BYTES) {
+      HIST.poner(clave, { estado: 'error', titulo: nombre,
+        msg: 'Es demasiado grande (más de 14 MB). Sacale una foto en vez de mandar el archivo.' });
+      continue;
     }
-    await DB.guardar(item);
-    await pintarCola();
-    abrirModal(`
-      <h3>Guardada en el teléfono</h3>
-      <div class="sub">${err.delServidor
-        ? `El servidor no la pudo procesar ahora: ${err.message}.`
-        : 'No se pudo subir ahora (sin señal).'}
-        Queda en la lista y sube sola. No hace falta que la vuelvas a sacar.</div>
-      <div class="acciones"><button onclick="cerrarModal()">Entendido</button></div>`);
+    await DB.guardar({
+      clave, nombre,
+      mime: chico.type || f.type || 'image/jpeg',
+      b64: await b64(chico), intentos: 0, proximo: 0, cuando: new Date().toISOString()
+    });
+    HIST.poner(clave, { estado: 'espera', titulo: nombre, msg: 'En la fila para subir' });
   }
+  subirCola(true);
 };
 
-function mostrarResultado(r) {
-  if (r.duplicado) {
-    return abrirModal(`
-      <h3>Esa factura ya estaba</h3>
-      <div class="sub">${r.error}</div>
-      <div class="acciones"><button onclick="cerrarModal()">Cerrar</button></div>`);
-  }
-  if (!r.ok) {
-    return abrirModal(`
-      <h3>No se pudo cargar</h3>
-      <div class="sub">${r.error || 'Error desconocido'}</div>
-      <div class="acciones"><button onclick="cerrarModal()">Cerrar</button></div>`);
-  }
-
-  const v = r.leido;
-  const frenado = v.bloqueos.length > 0;
-  const campo = (r, val, cls = '') =>
-    `<div class="campo ${cls}"><span class="r">${r}</span><span class="v">${val}</span></div>`;
-
-  let alic = '';
-  if (v.neto_21) alic += campo('Neto 21%', pesos(v.neto_21)) + campo('IVA 21%', pesos(v.iva_21));
-  if (v.neto_105) alic += campo('Neto 10,5%', pesos(v.neto_105)) + campo('IVA 10,5%', pesos(v.iva_105));
-  if (v.neto_27) alic += campo('Neto 27%', pesos(v.neto_27)) + campo('IVA 27%', pesos(v.iva_27));
-  if (v.percepciones) alic += campo('Percepciones', pesos(v.percepciones));
-
-  abrirModal(`
-    <h3>${frenado ? 'Hay algo que no cierra' : 'Revisá que esté bien'}</h3>
-    <div class="sub">
-      ${v.tipo || 'Comprobante'} ${v.letra} · ${v.punto_venta}-${v.numero}
-      <span class="chip ${(v.operacion||'').toLowerCase()}">${v.operacion || '?'}</span>
-    </div>
-    ${campo('Fecha', v.fecha_emision)}
-    ${campo(v.operacion === 'VENTA' ? 'Cliente' : 'Proveedor', v.contraparte_razon || '—')}
-    ${campo('CUIT', v.contraparte_cuit || '—')}
-    ${alic}
-    ${campo('Total', pesos(v.total))}
-    ${campo('IVA computable', pesos(v.iva_total), 'destaca')}
-    ${v.bloqueos.map(b => `<div class="alerta">${b}</div>`).join('')}
-    ${v.avisos.map(a => `<div class="alerta" style="background:#fef9c3;color:#854d0e">${a}</div>`).join('')}
-    <div class="acciones">
-      <a href="${r.comprobante_url}" target="_blank" rel="noopener">Ver la foto</a>
-      ${frenado
-        ? `<button onclick="cerrarModal()">Lo corrijo después</button>`
-        : `<button class="ok" onclick="confirmar('${r.hoja}',${r.fila})">Está bien, guardar</button>`}
-    </div>
-    ${frenado ? `<div style="color:var(--gris);font-size:.8rem;margin-top:10px">
-      Quedó anotada en la planilla como FRENADO. No suma al IVA hasta que se corrija.</div>` : ''}`);
-}
-
-async function confirmar(hoja, fila) {
-  abrirModal(`<div class="estado-lee"><div class="spinner"></div>
-    <div style="font-weight:600">Guardando…</div></div>`);
+// Regla de la fila: un archivo se saca SÓLO cuando el servidor dijo que lo
+// guardó (ok) o que ya estaba (duplicado). Cualquier otra respuesta lo deja.
+//   - error pasajero (reintentar): se reintenta solo, cada vez más espaciado
+//   - error que no se arregla solo: queda trabado, se avisa, y se reintenta
+//     sólo si la persona aprieta "Reintentar"
+let subiendo = false;
+async function subirCola(todo = false) {
+  if (subiendo) return;
+  subiendo = true;
   try {
-    await api('confirmar', { hoja, fila });
-    cerrarModal();
-    refrescar();
-  } catch (e) {
-    abrirModal(`<h3>No se pudo guardar</h3><div class="sub">${e.message}</div>
-      <div class="acciones"><button onclick="cerrarModal()">Cerrar</button></div>`);
+    const items = await DB.todos();
+    for (const it of items) {
+      if (!todo && (it.trabado || (it.proximo && it.proximo > Date.now()))) continue;
+      HIST.poner(it.clave, { estado: 'subiendo', titulo: it.nombre,
+        msg: 'Subiendo y leyendo… dejá la app abierta hasta que diga Anotada.' });
+      let r;
+      try {
+        r = await api('cargar', { archivo_b64: it.b64, mime: it.mime, nombre: it.nombre });
+      } catch (err) {
+        if (err.noAutorizado) {
+          HIST.poner(it.clave, { estado: 'error', titulo: it.nombre, msg: err.message });
+          break;
+        }
+        if (err.sinSenal) {
+          HIST.poner(it.clave, { estado: 'espera', titulo: it.nombre,
+            msg: 'Sin señal. Quedó guardada en el teléfono y sube sola.' });
+          break;
+        }
+        r = { ok: false, reintentar: true, error: err.message };
+      }
+      if (r.ok || r.duplicado) {
+        await DB.borrar(it.id);
+        HIST.poner(it.clave, resultado(r, it.nombre));
+        continue;
+      }
+      it.intentos = (it.intentos || 0) + 1;
+      if (r.reintentar) {
+        // 1, 2, 4, 8… minutos, hasta 6 horas: no gasta la cuota del lector.
+        it.proximo = Date.now() + Math.min(360, Math.pow(2, it.intentos - 1)) * 60000;
+        it.trabado = false;
+        HIST.poner(it.clave, { estado: 'espera', titulo: it.nombre,
+          msg: `El servidor no la pudo leer ahora (${r.error}). Quedó guardada y se reintenta sola.` });
+      } else {
+        it.trabado = true;
+        HIST.poner(it.clave, { estado: 'error', titulo: it.nombre,
+          msg: `No se pudo procesar: ${r.error || 'error desconocido'}. Quedó guardada en el teléfono. Avisale a Facu.` });
+      }
+      await DB.poner(it);
+    }
+  } finally {
+    subiendo = false;
+    await pintarCola();
   }
 }
 
-// ---------------------------------------------------------------- la cola
-async function subirCola() {
-  const items = await DB.todos();
-  if (!items.length) return;
-  for (const it of items) {
-    try {
-      const r = await api('cargar', {
-        archivo_b64: it.b64, mime: it.mime,
-        nombre: it.nombre, cargado_por: it.cargado_por
-      });
-      // Se borra de la cola SÓLO si el servidor la aceptó (o dijo que ya estaba).
-      if (r.ok || r.duplicado) await DB.borrar(it.id);
-    } catch (e) {
-      break;  // sigue sin señal: se corta y se reintenta después
-    }
-  }
-  await pintarCola();
-  refrescar();
+function resultado(r, nombre) {
+  if (r.duplicado) return { estado: 'ok', titulo: nombre, msg: 'Ya estaba cargada. No se suma dos veces.' };
+  if (!r.ok) return { estado: 'error', titulo: nombre, msg: r.error || 'No se pudo cargar' };
+  const v = r.leido || {};
+  const titulo = `${v.contraparte_razon || 'Comprobante'} · ${pesos(Math.abs(v.total))}`;
+  const det = `${v.clase || ''} ${v.letra || ''} ${v.numero_completo || ''} · ${fechaCorta(v.fecha_emision)}`;
+  const iva = v.credito ? ` · IVA a favor ${pesos(v.credito)}` : v.debito ? ` · IVA en contra ${pesos(v.debito)}` : '';
+  if (r.estado === 'OK') return { estado: 'ok', titulo, det, msg: '✓ Anotada' + iva };
+  const motivo = [...(v.bloqueos || []), ...(v.dudas || [])].join(' · ');
+  if (r.estado === 'REVISAR') return { estado: 'revisar', titulo, det,
+    msg: 'Anotada. Facu la revisa: ' + motivo };
+  return { estado: 'frenado', titulo, det, msg: 'Anotada pero no suma todavía: ' + motivo };
 }
 
 async function pintarCola() {
   const n = (await DB.todos()).length;
-  const box = $('#aviso-cola');
-  box.classList.toggle('hay', n > 0);
+  $('#aviso-cola').classList.toggle('hay', n > 0);
   $('#txt-cola').textContent = n === 1
-    ? '1 factura esperando señal para subir'
-    : `${n} facturas esperando señal para subir`;
+    ? '1 comprobante esperando para subir'
+    : `${n} comprobantes esperando para subir`;
 }
 
-$('#btn-reintentar').onclick = subirCola;
-window.addEventListener('online', subirCola);
-setInterval(subirCola, 60000);
+function pintarEnvios() {
+  const l = HIST.leer();
+  if (!l.length) {
+    $('#envios').innerHTML = '<div class="vacio">Todavía no mandaste nada desde este teléfono.</div>';
+    return;
+  }
+  $('#envios').innerHTML = l.map(x => `<div class="envio ${esc(x.estado)}">
+      <div class="t">${esc(x.titulo)}</div>
+      ${x.det ? `<div class="d">${esc(x.det)}</div>` : ''}
+      <div class="m">${esc(x.msg)}</div>
+    </div>`).join('');
+}
 
-// ---------------------------------------------------------------- pantalla
-// Cada refresco lleva número, y sólo pinta el más nuevo.
-//
-// Sin esto hay una carrera de verdad: subir una factura dispara un refresco, y
-// confirmarla dispara otro. Si el primero —que salió antes pero viaja detrás
-// del OCR— contesta último, repinta la pantalla con el estado ANTERIOR a la
-// confirmación. Se ve un IVA viejo, prolijo y creíble, sin ningún error.
-let gen = 0;
+$('#btn-reintentar').onclick = () => subirCola(true);
+window.addEventListener('online', () => subirCola());
+setInterval(() => subirCola(), 60000);
 
-async function refrescar() {
+// ---------------------------------------------------------------- panel
+// Cada refresco lleva número y sólo pinta el más nuevo: si uno viejo contesta
+// último, no repinta un IVA viejo que parece actual.
+let gen = 0, PANEL = null;
+
+async function refrescarPanel() {
   const mio = ++gen;
   try {
-    const [p, res] = await Promise.all([
-      api('pendientes', {}, 'GET'), api('resumen', {}, 'GET')
-    ]);
-    if (mio !== gen) return;   // llegó tarde: ya hay uno más nuevo
-    pintarPendientes(p.filas || []);
-    pintarResumen(res.meses || []);
+    const p = await api('panel', {}, 'GET');
+    if (mio !== gen) return;
+    PANEL = p;
+    pintarPanel();
   } catch (e) {
     if (mio !== gen) return;
-    $('#pendientes').innerHTML =
-      `<div class="vacio">No se pudo conectar.<br><small>${e.message}</small></div>`;
+    $('#panel').innerHTML = `<div class="vacio">No se pudo conectar.<br><small>${esc(e.message)}</small></div>`;
   }
 }
 
-function pintarPendientes(filas) {
+function linea(r, v) {
+  return `<div class="linea-det"><span class="r">${r}</span><span class="v">${v}</span></div>`;
+}
+
+function pintarPanel() {
+  const p = PANEL, h = p.hoy || {};
+  const pendientes = (h.revisar || 0) + (h.frenados || 0);
+  const paga = h.a_pagar > 0;
+
+  const hoy = `<div class="caja ${paga ? 'pagar' : 'favor'}">
+      <div class="rot">Al día de hoy${h.mes ? ' · ' + nombreMes(h.mes) : ''}</div>
+      <div class="veredicto"><div class="plata">${pesos(paga ? h.a_pagar : h.a_favor)}</div>
+        <div style="font-weight:600">${paga ? 'Hay que pagar de IVA' : 'Saldo de IVA a favor'}</div></div>
+      ${linea('IVA en contra (ventas)', pesos(h.debito_total))}
+      ${linea('IVA a favor (compras)', '−' + pesos(h.credito_total))}
+      ${linea('Percepciones y retenciones de IVA', '−' + pesos(h.perc_iva_total))}
+      ${h.saldo_inicial ? linea('Saldo a favor inicial', '−' + pesos(h.saldo_inicial)) : ''}
+      ${linea('IVA a pagar calculado (suma de los meses)', pesos(h.a_pagar_total))}
+      ${linea('Gastos totales', pesos(h.compras_total))}
+      ${pendientes ? `<div class="nota">${h.revisar} para revisar y ${h.frenados} frenados:
+        no suman hasta que se revisen. Estos números no son los definitivos.</div>` : ''}
+      ${h.venta_sin_iva ? `<div class="nota">${h.venta_sin_iva} ${h.venta_sin_iva === 1 ? 'venta aprobada' : 'ventas aprobadas'}
+        sin IVA cargado: no suman hasta que se les escriba el IVA en la planilla.</div>` : ''}
+      ${h.sin_fecha ? `<div class="nota">${h.sin_fecha} sin fecha: no van a ningún mes.</div>` : ''}
+      ${h.meses_futuros ? `<div class="nota">Hay comprobantes con fecha futura: revisá que la fecha esté bien leída.</div>` : ''}
+      ${p.planilla_url ? `<a class="link-planilla" href="${esc(p.planilla_url)}" target="_blank" rel="noopener">Abrir la planilla completa ↗</a>` : ''}
+    </div>`;
+
+  const anios = (p.anios || []).slice().reverse().map(y => `<div class="caja">
+      <div class="cab"><span class="nombre">Año ${esc(y.anio)}</span>
+        ${y.revisar + y.frenados ? `<span class="pend">${y.revisar + y.frenados} sin revisar</span>` : ''}</div>
+      ${linea('IVA en contra (ventas)', pesos(y.debito))}
+      ${linea('IVA a favor (compras)', pesos(y.credito))}
+      ${linea('Percepciones de IVA', pesos(y.perc_iva))}
+      ${linea('IVA a pagar calculado', pesos(y.a_pagar))}
+      ${linea('Saldo a favor al cierre', pesos(y.a_favor_al_cierre))}
+      ${linea('Gastos', pesos(y.compras))}
+      ${linea('Ventas', pesos(y.ventas))}
+    </div>`).join('');
+
+  const meses = (p.meses || []).slice().reverse().map(m => {
+    const pm = m.a_pagar > 0, pend = m.revisar + m.frenados;
+    return `<div class="caja ${pm ? 'pagar' : 'favor'}">
+      <div class="cab"><span class="nombre">${esc(nombreMes(m.mes))}</span>
+        ${pend ? `<span class="pend">${pend} sin revisar</span>` : ''}</div>
+      <div class="veredicto"><div class="rot">${pm ? 'Hay que pagar' : 'Queda a favor'}</div>
+        <div class="plata">${pesos(pm ? m.a_pagar : m.a_favor)}</div></div>
+      ${linea('IVA en contra (ventas)', pesos(m.debito))}
+      ${linea('IVA a favor (compras)', '−' + pesos(m.credito))}
+      ${linea('Percepciones de IVA', '−' + pesos(m.perc_iva))}
+      ${m.a_favor_anterior ? linea('A favor del mes anterior', '−' + pesos(m.a_favor_anterior)) : ''}
+      ${linea('Gastos del mes', pesos(m.compras))}
+      ${linea('Comprobantes', m.comprobantes)}
+    </div>`;
+  }).join('');
+
+  const opcionesMes = ['<option value="">Todos los meses</option>']
+    .concat((p.meses || []).slice().reverse().map(m =>
+      `<option value="${esc(m.mes)}">${esc(nombreMes(m.mes))}</option>`)).join('');
+
+  $('#panel').innerHTML = `
+    <div class="grilla">${hoy}</div>
+    <h2>Por año</h2>
+    ${anios ? `<div class="grilla">${anios}</div>` : '<div class="vacio">Todavía no hay comprobantes.</div>'}
+    <h2>Por mes</h2>
+    ${meses ? `<div class="grilla">${meses}</div>` : '<div class="vacio">Todavía no hay comprobantes.</div>'}
+    <h2>Todos los comprobantes</h2>
+    <div class="filtros">
+      <select id="f-mes">${opcionesMes}</select>
+      <select id="f-est">
+        <option value="">Todos los estados</option>
+        <option value="OK">OK</option><option value="REVISAR">Para revisar</option>
+        <option value="FRENADO">Frenados</option>
+      </select>
+      <select id="f-op">
+        <option value="">Compras y ventas</option>
+        <option value="COMPRA">Sólo compras y gastos</option><option value="VENTA">Sólo ventas</option>
+      </select>
+      <input id="f-txt" type="search" placeholder="Buscar proveedor, CUIT, detalle…">
+    </div>
+    <div class="tabla-caja" id="tabla"></div>`;
+
+  ['#f-mes', '#f-est', '#f-op'].forEach(s => $(s).onchange = pintarTabla);
+  $('#f-txt').oninput = pintarTabla;
+  pintarTabla();
+}
+
+function pintarTabla() {
+  const fm = $('#f-mes').value, fe = $('#f-est').value, fo = $('#f-op').value;
+  const ft = $('#f-txt').value.trim().toLowerCase();
+  const filas = (PANEL.filas || []).filter(f =>
+    (!fm || f.mes === fm) && (!fe || f.estado === fe) && (!fo || f.operacion === fo) &&
+    (!ft || [f.razon, f.cuit, f.detalle, f.numero, f.clase, f.quien].join(' ').toLowerCase().includes(ft)));
+
   if (!filas.length) {
-    $('#pendientes').innerHTML = '<div class="vacio">Nada pendiente. Todo revisado.</div>';
+    $('#tabla').innerHTML = '<div class="vacio" style="border:none">No hay comprobantes con ese filtro.</div>';
     return;
   }
-  $('#pendientes').innerHTML = filas.map(f => {
-    const frenado = f.estado === 'FRENADO';
-    return `<div class="tarj ${frenado ? 'frenado' : 'revisar'}">
-      <div class="top">
-        <span class="quien">${f.razon || '(sin nombre)'}</span>
-        <span class="monto">${pesos(f.total)}</span>
-      </div>
-      <div class="meta">
-        ${f.fecha} · ${f.tipo || ''} ${f.punto_venta}-${f.numero}
-        <span class="chip ${(f.operacion||'').toLowerCase()}">${f.operacion}</span>
-        · IVA ${pesos(f.iva)}
-      </div>
-      ${f.alertas ? `<div class="alerta">${f.alertas}</div>` : ''}
-      <div class="acciones">
-        ${f.comprobante ? `<a href="${f.comprobante}" target="_blank" rel="noopener">Ver</a>` : ''}
-        ${frenado ? '' : `<button class="ok" onclick="confirmar('${f.hoja}',${f.fila})">Confirmar</button>`}
-      </div>
-    </div>`;
-  }).join('');
+  const s = k => filas.reduce((a, f) => a + (Number(f[k]) || 0), 0);
+  const n = v => `<td class="n">${v ? pesos(v) : '—'}</td>`;
+  $('#tabla').innerHTML = `<table>
+    <thead><tr>
+      <th>Razón social</th><th>Estado</th><th>Fecha</th><th>Comprobante</th><th>CUIT</th>
+      <th>Detalle</th><th>Neto gravado</th><th>IVA a favor</th><th>IVA en contra</th>
+      <th>Percep. IVA</th><th>Otros imp.</th><th>No grav./exento</th><th>Total pagado</th>
+      <th>Cargó</th><th>Archivo</th><th>Alertas</th>
+    </tr></thead>
+    <tbody>${filas.map(f => `<tr>
+      <td class="razon">${esc(f.razon || '(sin nombre)')}<br><span class="op">${esc(f.operacion || '')}</span></td>
+      <td><span class="est ${esc(f.estado)}">${esc(f.estado)}</span></td>
+      <td>${esc(fechaCorta(f.fecha))}</td>
+      <td>${esc([f.clase, f.letra, f.numero].filter(Boolean).join(' '))}</td>
+      <td>${esc(f.cuit || '—')}</td>
+      <td class="det">${esc(f.detalle || '—')}</td>
+      ${n(f.neto)}${n(f.credito)}${n(f.debito)}${n(f.perc_iva)}${n(f.otros_impuestos)}${n(f.no_gravado)}${n(f.total)}
+      <td>${esc(f.quien || '')}</td>
+      <td>${f.archivo ? `<a href="${esc(f.archivo)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td>
+      <td class="det">${esc(f.alertas || '')}</td>
+    </tr>`).join('')}</tbody>
+    <tfoot><tr>
+      <td>${filas.length} comprobantes</td><td></td><td></td><td></td><td></td><td></td>
+      ${n(s('neto'))}${n(s('credito'))}${n(s('debito'))}${n(s('perc_iva'))}${n(s('otros_impuestos'))}${n(s('no_gravado'))}${n(s('total'))}
+      <td></td><td></td><td></td>
+    </tr></tfoot></table>
+    <div style="padding:8px 12px;color:var(--gris);font-size:.78rem">Los totales de esta tabla suman
+      todo lo filtrado, también lo que está para revisar o frenado. El IVA de arriba sólo suma lo OK.</div>`;
 }
-
-const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
-               'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const nombreMes = s => {
-  const [a, m] = String(s).split('-');
-  return MESES[Number(m) - 1] ? `${MESES[Number(m) - 1]} ${a}` : s;
-};
-
-function pintarResumen(meses) {
-  if (!meses.length) {
-    $('#resumen').innerHTML = '<div class="vacio">Todavía no hay ningún mes cargado.</div>';
-    return;
-  }
-  // El mes más nuevo primero: es el que se está mirando.
-  $('#resumen').innerHTML = meses.slice().reverse().map(m => {
-    const paga = m.a_pagar > 0;
-    const sinRevisar = (m.sin_revisar || 0) + (m.frenados || 0);
-    return `<div class="mes">
-      <div class="cab">
-        <span class="nombre">${nombreMes(m.mes)}</span>
-        ${sinRevisar ? `<span class="pend">${sinRevisar} sin revisar</span>` : ''}
-      </div>
-      <div class="veredicto ${paga ? 'pagar' : 'favor'}">
-        <div class="rot">${paga ? 'Hay que pagar' : 'Queda a favor'}</div>
-        <div class="plata">${pesos(paga ? m.a_pagar : m.a_favor)}</div>
-      </div>
-      <div class="linea-det"><span class="r">IVA ventas (débito)</span>
-        <span class="v">${pesos(m.ventas)}</span></div>
-      <div class="linea-det"><span class="r">IVA compras (crédito)</span>
-        <span class="v">−${pesos(m.compras)}</span></div>
-      <div class="linea-det"><span class="r">Percepciones sufridas</span>
-        <span class="v">−${pesos(m.percepciones)}</span></div>
-      ${sinRevisar ? `<div class="nota">Todavía hay ${sinRevisar}
-        ${sinRevisar === 1 ? 'comprobante' : 'comprobantes'} sin revisar:
-        este número no es el definitivo.</div>` : ''}
-    </div>`;
-  }).join('');
-}
-
-function abrirModal(html) { $('#hoja').innerHTML = html; $('#modal').classList.add('abierto'); }
-function cerrarModal() { $('#modal').classList.remove('abierto'); }
-$('#modal').onclick = e => { if (e.target.id === 'modal') cerrarModal(); };
 
 // ---------------------------------------------------------------- arranque
+pintarEnvios();
 if (!CFG.api) {
-  $('#pendientes').innerHTML =
+  $('#envios').innerHTML =
     '<div class="vacio">Este link todavía no está configurado.<br>' +
     'Abrí el link completo que te pasó Facu (el que termina en #api=…).</div>';
+  $('#btn-cargar').disabled = true;
 } else {
-  if (!CFG.quien) {
-    const q = prompt('¿Quién sos? (queda anotado en cada factura que cargues)');
-    if (q) { localStorage.setItem('iva_quien', q.trim()); CFG.quien = q.trim(); }
-  }
-  pintarCola(); subirCola(); refrescar();
-
-  // De quién es esta planilla lo dice el backend. Si no contesta (sin señal),
-  // el encabezado neutro se queda como está y la app funciona igual.
+  pintarCola(); subirCola();
+  // De quién es esta planilla y quién está cargando lo dice el backend. Si no
+  // contesta (sin señal), el encabezado neutro se queda y la app anda igual.
   api('ping', {}, 'GET')
-    .then(r => { if (r.empresa) $('#titulo').textContent = r.empresa; })
+    .then(r => {
+      if (r.empresa) $('#titulo').textContent = r.empresa;
+      if (r.quien) $('#sub').textContent = 'Hola, ' + r.quien;
+    })
     .catch(() => {});
 }
 

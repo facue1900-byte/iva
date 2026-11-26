@@ -133,6 +133,10 @@
   tfoot td:first-child { z-index: 4; background: #f3f4f6; }
   .est { font-size: .68rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; }
   .est.OK { background: var(--verde-claro); color: #166534; }
+  /* Resultado del mes: + verde clarito si quedó a favor, − rojo clarito si en contra. */
+  .res { font-weight: 800; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .res.favor { background: var(--verde-claro); color: #166534; }
+  .res.contra { background: #fee2e2; color: #991b1b; }
   .est.REVISAR { background: var(--amba-claro); color: #854d0e; }
   .est.FRENADO { background: var(--rojo-claro); color: #991b1b; }
   .op { font-size: .68rem; font-weight: 700; color: var(--gris); }
@@ -568,7 +572,8 @@ function pintarPanel() {
       <div class="veredicto"><div class="rot">${pm ? 'Hay que pagar' : 'A favor acumulado al cierre'}</div>
         <div class="plata">${pesos(pm ? m.a_pagar : m.a_favor)}</div></div>
       ${(() => { const r = m.debito - m.credito - m.perc_iva;
-        return linea('<b>Resultado del mes solo</b>', `<b>${r > 0 ? 'en contra ' + pesos(r) : 'a favor ' + pesos(-r)}</b>`); })()}
+        return linea('<b>Resultado del mes</b>',
+          `<span class="res ${r > 0 ? 'contra' : 'favor'}">${r > 0 ? '−' : '+'} ${pesos(Math.abs(r))}</span>`); })()}
       ${linea('IVA en contra (ventas)', pesos(m.debito))}
       ${linea('IVA a favor (compras)', '−' + pesos(m.credito))}
       ${linea('Percepciones de IVA', '−' + pesos(m.perc_iva))}
